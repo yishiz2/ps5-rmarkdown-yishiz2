@@ -1,0 +1,145 @@
+---
+title: "PS5"
+author: "Reena"
+date: "2023-02-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load and Check Data
+
+```{r, echo=FALSE}
+library(dplyr)
+library(ggplot2)
+
+data <- read.delim("gapminder.csv.bz2")
+
+nrow(data)
+
+ncol(data)
+```
+There are 13055 rows, 25 columns
+
+```{r}
+rand_rows <- sample(nrow(data), 5)
+data[rand_rows, ]
+```
+It looks fine.
+
+
+## Descriptive Statistics
+
+```{r}
+
+length(unique(data$iso2))
+length(unique(data$name))
+length(unique(data$iso3))
+```
+1) It looks like there are 253 iso3, 249 iso2, and 250 names. 
+
+```{r}
+countries <- unique(data[, c("name", "iso2", "iso3")])
+```
+It looks like some iso3 names has missing iso2 and names. Namibia does not have a corresponding iso2.
+
+```{r}
+iso2names <- data %>% 
+  group_by(iso2) %>% 
+  summarise(num = n_distinct(name))
+```
+2) a. Looks like there is no iso2 codes that correspond to more than one name. However, there are two blank iso2 lines.
+
+```{r}
+iso3names <- data %>% 
+  group_by(name) %>% 
+  summarise(num = n_distinct(iso3))
+```
+ b. There are 4 blank lines. Looks like below four countries have alternative names:
+1988, Cocos (Keeling) Islands, CCK/CHANISL
+3974, Gabon, GAB/GBM
+6261, Republic of Korea, KOR/KOS
+8666, Netherlands, NLD/NLD CURACAO
+
+```{r}
+cleaned_data <- data[complete.cases(data$time),]
+max(cleaned_data$time)
+min(cleaned_data$time)
+```
+3) Excluding the NA values, the maximum year is 2019 and the minimum year is 1960.
+
+
+## CO2 Emissions
+```{r}
+sum(is.na(data$co2))
+sum(is.na(data$co2_PC))
+```
+1) There are 2658 missing data for co2 and 2661 missing data for co2_PC
+
+```{r}
+missing_counts <- data %>%
+  group_by(time) %>%
+  summarise(co2_missing = sum(is.na(data$co2)),
+            co2_pc_missing = sum(is.na(data$co2_PC)))
+
+most_missing_co2 <- missing_counts[which.max(missing_counts$co2_missing), "time"]
+most_missing_co2_pc <- missing_counts[which.max(missing_counts$co2_pc_missing), "time"]
+
+most_missing_co2
+most_missing_co2_pc
+```
+I had to regroup the dataset again by missing_counts. I found out that for both co2 and co2_PC columns, 1960 has the most missing data.
+
+```{r}
+data %>% 
+  filter(iso3 ==c( "USA", "CHN", "IND",  "GBR", "KOR", "SGP")) %>% 
+  ggplot()+
+  geom_line(aes(x=time, y = co2, col=iso3))+
+  geom_point(aes(x=time, y = co2, col=iso3))
+
+```
+2) This is a plot of total CO2 emissions over time for the U.S, China, India, Korea, Great Britain, 
+and Singapore. I found that the CO2 emission of USA and China are significantly high no matter
+who they compared to.
+
+```{r}
+data %>% 
+  filter(iso3 ==c( "USA", "CHN", "IND",  "GBR", "KOR", "SGP")) %>% 
+  ggplot()+
+  geom_line(aes(x=time, y = co2_PC, col=iso3))+
+  geom_point(aes(x=time, y = co2_PC, col=iso3))
+```
+3) This is a plot for CO2 per capita for these countries. I can see that the US is very high
+for CO2 emissions per capita. It does not even intersect with other countries. China's CO2
+emissions per capita is actually lower than a lot other countries, but still higher than that
+of Inida.
+
+```{r}
+ave_co2_pc_region_2016 <- data %>%
+  filter(time == 2016) %>%
+  group_by(region) %>%
+  summarize(ave_co2_pc = mean(co2_PC, na.rm = TRUE))
+ave_co2_pc_region_2016$time <- 2016
+ave_co2_pc_region_2016
+
+ave_co2_pc_region_1960 <- data %>%
+  filter(time == 1960) %>%
+  group_by(region) %>%
+  summarize(ave_co2_pc = mean(co2_PC, na.rm = TRUE))
+ave_co2_pc_region_1960$time <- 1960
+ave_co2_pc_region_1960
+```
+4) Europe has the highest average CO2_PC in 2016, followed by Americas and Asia. 
+In 1960, Americas has the highest average CO2_PC, followed by Europe and Oceania.
+
+```{r}
+ave_co2_pc_comb <- rbind(ave_co2_pc_region_1960, ave_co2_pc_region_2016)
+ggplot(ave_co2_pc_comb, aes(x = region, y = ave_co2_pc, fill = factor(time))) + 
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_fill_manual(values = c("purple", "orange")) +
+  labs(x = "Region", y = "Average CO2 (per capita)", fill = "Year")
+
+```
+
