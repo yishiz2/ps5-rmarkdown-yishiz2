@@ -122,6 +122,8 @@ ave_co2_pc_region_2016 <- data %>%
   group_by(region) %>%
   summarize(ave_co2_pc = mean(co2_PC, na.rm = TRUE))
 ave_co2_pc_region_2016$time <- 2016
+ave_co2_pc_region_2016 <- ave_co2_pc_region_2016 %>%
+  filter(ave_co2_pc != 19.396490)
 ave_co2_pc_region_2016
 
 ave_co2_pc_region_1960 <- data %>%
@@ -129,6 +131,7 @@ ave_co2_pc_region_1960 <- data %>%
   group_by(region) %>%
   summarize(ave_co2_pc = mean(co2_PC, na.rm = TRUE))
 ave_co2_pc_region_1960$time <- 1960
+ave_co2_pc_region_1960 <- na.omit(ave_co2_pc_region_1960)
 ave_co2_pc_region_1960
 ```
 4) Europe has the highest average CO2_PC in 2016, followed by Americas and Asia. 
@@ -139,7 +142,15 @@ ave_co2_pc_comb <- rbind(ave_co2_pc_region_1960, ave_co2_pc_region_2016)
 ggplot(ave_co2_pc_comb, aes(x = region, y = ave_co2_pc, fill = factor(time))) + 
   geom_bar(stat = "identity", position = "dodge") +
   scale_fill_manual(values = c("purple", "orange")) +
-  labs(x = "Region", y = "Average CO2 (per capita)", fill = "Year")
+  labs(x = "Continent", y = "Average CO2 (per capita)", fill = "Year")
 
 ```
+5) Here is a plot for average CO2 emissions per capita across continents in 1960 and 2016.
 
+```{r}
+data %>%
+  select(time, region, name, co2_PC) %>% 
+  filter(time == 2019, !is.na(name)) %>%
+  arrange(desc(co2_PC)) %>% 
+  top_n(3, co2_PC) 
+```
